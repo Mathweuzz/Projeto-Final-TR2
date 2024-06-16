@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Tank Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding-top: 50px;
+        }
+        .container {
+            max-width: 900px;
+        }
+        canvas {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Fuel Tank Levels</h1>
+        <table id="data-table" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>DateTime</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+        </table>
+        <canvas id="fuelChart" width="800" height="400"></canvas>
+    </div>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Socket.io -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Moment.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            const socket = io.connect('http://127.0.0.1:5000');
+
+            const table = $('#data-table').DataTable({
+                order: [[0, 'desc']]
+            });
+
+            let currentPage = 0;
+            let pageSize = table.page.len(); 
+
+
+            function updateTable(data) {
+                console.log("Updating table with data:", data);
+                
+                const pageInfo = table.page.info();
+                currentPage = pageInfo.page;
+                pageSize = pageInfo.length;
+
+                table.clear();
+                data.forEach(row => {
+                    table.row.add([row[0], row[1]]);
+                });
+                table.draw();
+
+                table.page(currentPage).draw(false);
+                table.page.len(pageSize).draw(false);
+
+            }
+
+            socket.on('connect', function() {
+                console.log('Connected to WebSocket'); 
+            });
+
+            socket.on('update', function(data) {
+                console.log("Data received via WebSocket:", data);
+                updateTable(data);
+            });
+
+            $.ajax({
+                url: '/data',
+                method: 'GET',
+                success: function(data) {
+                    console.log("Initial data:", data);
+                    updateTable(data);
+                },
+                error: function(err) {
+                    console.error("Failed to fetch initial data", err);
+                }
+            });
+
+            setInterval(function() {
+                $.ajax({
+                    url: '/data',
+                    method: 'GET',
+                    success: function(data) {
+                        console.log("Updated data:", data);
+                        updateTable(data);
+                    },
+                    error: function(err) {
+                        console.error("Failed to fetch updated data", err);
+                    }
+                });
+            }, 10000);
+        });
+    </script>
+    
+</body>
+</html>
