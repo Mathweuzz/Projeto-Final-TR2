@@ -29,10 +29,49 @@ $(document).ready(function() {
         console.log('Connected to WebSocket'); 
     });
 
+    const fuelChart = document.getElementById('fuelChart').getContext('2d');
+    let chart = null;
+
+    function updateChart(data) {
+        data.reverse();
+        
+        const labels = data.map(row => moment(row[0]).format('YYYY-MM-DD HH:mm')); // Extract datetime labels
+        const levels = data.map(row => row[1]); // Extract level values
+
+        if (chart) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = levels;
+            chart.update();
+        } else {
+            chart = new Chart(fuelChart, {
+                type: 'line', // Choose chart type (e.g., line, bar, etc.)
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Fuel Level',
+                        data: levels,
+                        borderColor: 'blue',
+                        borderWidth: 1,
+                        fill: false 
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true // Start y-axis at 0
+                        }
+                    }
+                }
+            });
+        }
+    }
+
     socket.on('update', function(data) {
         console.log("Data received via WebSocket:", data);
         updateTable(data);
+        updateChart(data);
     });
+
 
     $.ajax({
         url: '/data',
@@ -40,6 +79,7 @@ $(document).ready(function() {
         success: function(data) {
             console.log("Initial data:", data);
             updateTable(data);
+            updateChart(data);
         },
         error: function(err) {
             console.error("Failed to fetch initial data", err);
