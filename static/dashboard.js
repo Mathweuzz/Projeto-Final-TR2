@@ -30,6 +30,8 @@ $(document).ready(function() {
     socket.on('update', function(data) {
         console.log("Data received via WebSocket:", data);
         updateTable(data);
+        updateChart(data);
+        updateStats(data); // Adiciona a atualização das estatísticas
     });
 
     $.ajax({
@@ -39,6 +41,7 @@ $(document).ready(function() {
             console.log("Initial data:", data);
             updateTable(data);
             updateChart(data);
+            updateStats(data); // Adiciona a atualização das estatísticas
         },
         error: function(err) {
             console.error("Failed to fetch initial data", err);
@@ -57,6 +60,8 @@ $(document).ready(function() {
         if (chart) {
             chart.data.labels = labels;
             chart.data.datasets[0].data = levels;
+            chart.options.plugins.tooltip.enabled = true; // Habilita o tooltip
+            chart.options.plugins.zoom.enabled = true; // Habilita o zoom
             chart.update();
         } else {
             chart = new Chart(fuelChart, {
@@ -76,17 +81,31 @@ $(document).ready(function() {
                         y: {
                             beginAtZero: true
                         }
+                    },
+                    plugins: {
+                        tooltip: {
+                            enabled: true // Habilita o tooltip
+                        },
+                        zoom: {
+                            enabled: true // Habilita o zoom
+                        }
                     }
                 }
             });
         }
     }
 
-    socket.on('update', function(data) {
-        console.log("Data received via WebSocket:", data);
-        updateTable(data);
-        updateChart(data);
-    });
+    function updateStats(data) {
+        const levels = data.map(row => row[1]);
+        const averageLevel = levels.reduce((sum, level) => sum + level, 0) / levels.length;
+        const minLevel = Math.min(...levels);
+        const maxLevel = Math.max(...levels);
+
+        // Exibe as estatísticas no HTML
+        $("#average-level").text("Nível Médio: " + averageLevel.toFixed(2));
+        $("#min-level").text("Nível Mínimo: " + minLevel.toFixed(2));
+        $("#max-level").text("Nível Máximo: " + maxLevel.toFixed(2));
+    }
 
     $("#filter-form").submit(function(event) {
         event.preventDefault();
@@ -103,6 +122,7 @@ $(document).ready(function() {
             success: function(data) {
                 updateTable(data);
                 updateChart(data);
+                updateStats(data); // Adiciona a atualização das estatísticas
             },
             error: function(err) {
                 console.error("Erro ao obter dados filtrados", err);
