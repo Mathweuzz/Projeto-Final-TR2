@@ -1,11 +1,6 @@
 #include <SPI.h>
 #include <LoRa.h>
 
-// Define os pinos para a comunicação Lora
-#define SS 18
-#define RST 14
-#define DI0 26
-
 // Define o endereço do receptor Lora
 #define RECEIVER_ADDRESS 0x01
 
@@ -16,8 +11,6 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
 
-  // Inicializa a comunicação Lora
-  LoRa.setPins(SS, RST, DI0);
   if (!LoRa.begin(LORA_FREQUENCY)) {
     Serial.println("Starting LoRa failed!");
     while (1);
@@ -30,24 +23,28 @@ void setup() {
   Serial.print(LORA_FREQUENCY);
   Serial.println(" Hz");
 
-  // Define o endereço do receptor
-  LoRa.onReceive(onReceive);
 }
 
 void loop() {
-  // Entra em modo de baixo consumo de energia
-  LoRa.sleep();
-}
+  // Try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    // Received a packet
+    Serial.print("Received packet '");
 
-void onReceive(int packetSize) {
-  // Lê os dados recebidos
-  String receivedMessage = "";
-  for (int i = 0; i < packetSize; i++) {
-    receivedMessage += (char)LoRa.read();
+    // Read packet
+    while (LoRa.available()) {
+      String receivedData = LoRa.readString();
+      Serial.print(receivedData);
+
+      // Extract distance value from the received string
+      if (receivedData.startsWith("Distance: ")) {
+        receivedDistance = receivedData.substring(10).toFloat();
+      }
+    }
+
+    // Print the received distance
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
   }
-
-  // Imprime os dados recebidos
-  Serial.println("Received message: " + receivedMessage);
-
-  // Processa os dados recebidos (ex: salva em um arquivo, envia para um servidor)
 }
