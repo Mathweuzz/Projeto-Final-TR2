@@ -6,6 +6,8 @@ const int reset_lora = 9;
 const int trigger_port = 3;
 const int echo_port = 4;
 const float longest_distance = 100;
+uint8_t indatabuf[RH_RF95_MAX_MESSAGE_LEN];
+uint8_t len = sizeof(indatabuf);
 
 // instanciation
 RH_RF95 rf95;
@@ -34,11 +36,33 @@ void loop()
   makePulse();
   float duration = pulseIn(echo_port, HIGH);
   String distance_cm = String(microsecondsToCentimeters(duration), 2);
-  char buffer[distance_cm.length()];
-  distance_cm.toCharArray(buffer, sizeof(buffer));
-  rf95.send((uint8_t*)buffer, distance_cm.length());
-  rf95.waitPacketSent();
+  sendLoraMessage(distance_cm);
   Serial.println("Sent message");
+
+  if (rf95.waitAvailableTimeout(3000))
+  { 
+    // Should be a reply message for us now   
+    if (rf95.recv(indatabuf, &len))
+   {
+      // Serial print "got reply:" and the reply message from the server
+       if (len < sizeof(indatabuf)) {
+        indatabuf[len] = '\0';
+      } 
+      Serial.print("got reply: ");
+      Serial.println((char*)indatabuf);
+   }
+     else
+     {
+      Serial.println("recv failed");
+     }
+  }
+  else
+  {
+    // Serial print "No reply, is rf95_server running?" if don't get the reply .
+    Serial.println("No reply, is rf95_server running? Sending the same message");
+    sendLoraMessage(distance_cm);
+  }
+  delay(400);
 
   delay(5000);
 }
@@ -56,4 +80,11 @@ float microsecondsToCentimeters(float microseconds) {
   // The ping travels out and back, so to find the distance of the object
   // we take half of the distance traveled.
   return microseconds / 29 / 2;
+}
+
+void sendLoraMessage(String message) {
+  char buffer[message.length()];
+  message.toCharArray(buffer, sizeof(buffer));
+  rf95.send((uint8_t*)buffer, message.length());
+  rf95.waitPacketSent();
 }
