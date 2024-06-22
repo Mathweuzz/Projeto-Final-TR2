@@ -34,13 +34,13 @@ void loop()
   makePulse();
   float duration = pulseIn(echo_port, HIGH);
   String distance_cm = String(microsecondsToCentimeters(duration), 2);
-  char buffer[distance_cm.length() + 1]; // +1 para o caractere nulo '\0'
+  char buffer[distance_cm.length()];
   distance_cm.toCharArray(buffer, sizeof(buffer));
   rf95.send((uint8_t*)buffer, distance_cm.length());
   rf95.waitPacketSent();
   Serial.println("Sent message");
 
-  delay(100);
+  delay(5000);
 }
 
 void makePulse(void) {
