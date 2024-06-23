@@ -48,6 +48,21 @@ def update():
     socketio.emit('update', data)
     return 'Data updated and sent via WebSocket'
 
+
+@app.route('/insert', methods=['POST'])
+def insert_data():
+    level = request.form.get('level')
+    if level:
+        conn = sqlite3.connect('fuel_tank_data.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO fuel_data (datetime, level) VALUES (datetime('now'), ?)", (level,))
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Data inserted successfully'})
+    else:
+        return jsonify({'error': 'Invalid data'}), 400
+
+        
 if __name__ == '__main__':
     print("Starting Flask server with SocketIO")
     socketio.run(app, debug=True)

@@ -37,7 +37,7 @@ void loop()
   float duration = pulseIn(echo_port, HIGH);
   String distance_cm = String(microsecondsToCentimeters(duration), 2);
   sendLoraMessage(distance_cm);
-  Serial.println("Sent message");
+  Serial.println(distance_cm);
 
   if (rf95.waitAvailableTimeout(3000))
   { 
@@ -62,8 +62,6 @@ void loop()
     Serial.println("No reply, is rf95_server running? Sending the same message");
     sendLoraMessage(distance_cm);
   }
-  delay(400);
-
   delay(5000);
 }
 
