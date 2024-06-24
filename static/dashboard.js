@@ -2,7 +2,7 @@ $(document).ready(function() {
     const socket = io.connect('http://127.0.0.1:5000');
 
     const table = $('#data-table').DataTable({
-        order: [[0, 'desc']]
+        order: [[0, 'desc']],
     });
 
     let currentPage = 0;
@@ -15,38 +15,13 @@ $(document).ready(function() {
 
         table.clear();
         data.forEach(row => {
-            table.row.add([row[0], row[1]]);
+            table.row.add([row[0], row[1], row[2]]);
         });
         table.draw();
 
         table.page(currentPage).draw(false);
         table.page.len(pageSize).draw(false);
     }
-
-    socket.on('connect', function() {
-        console.log('Connected to WebSocket'); 
-    });
-
-    socket.on('update', function(data) {
-        console.log("Data received via WebSocket:", data);
-        updateTable(data);
-        updateChart(data);
-        updateStats(data); // Adiciona a atualização das estatísticas
-    });
-
-    $.ajax({
-        url: '/data',
-        method: 'GET',
-        success: function(data) {
-            console.log("Initial data:", data);
-            updateTable(data);
-            updateChart(data);
-            updateStats(data); // Adiciona a atualização das estatísticas
-        },
-        error: function(err) {
-            console.error("Failed to fetch initial data", err);
-        }
-    });
 
     const fuelChart = document.getElementById('fuelChart').getContext('2d');
     let chart = null; 
@@ -57,11 +32,12 @@ $(document).ready(function() {
         const labels = data.map(row => moment(row[0]).format('YYYY-MM-DD HH:mm'));
         const levels = data.map(row => row[1]);
 
+
         if (chart) {
             chart.data.labels = labels;
             chart.data.datasets[0].data = levels;
-            chart.options.plugins.tooltip.enabled = true; // Habilita o tooltip
-            chart.options.plugins.zoom.enabled = true; // Habilita o zoom
+            chart.options.plugins.tooltip.enabled = true;
+            chart.options.plugins.zoom.enabled = true;
             chart.update();
         } else {
             chart = new Chart(fuelChart, {
@@ -84,10 +60,10 @@ $(document).ready(function() {
                     },
                     plugins: {
                         tooltip: {
-                            enabled: true // Habilita o tooltip
+                            enabled: true 
                         },
                         zoom: {
-                            enabled: true // Habilita o zoom
+                            enabled: true 
                         }
                     }
                 }
@@ -101,32 +77,109 @@ $(document).ready(function() {
         const minLevel = Math.min(...levels);
         const maxLevel = Math.max(...levels);
 
-        // Exibe as estatísticas no HTML
         $("#average-level").text("Nível Médio: " + averageLevel.toFixed(2));
         $("#min-level").text("Nível Mínimo: " + minLevel.toFixed(2));
         $("#max-level").text("Nível Máximo: " + maxLevel.toFixed(2));
     }
 
-    $("#filter-form").submit(function(event) {
-        event.preventDefault();
-
-        const startDate = $("#start-date").val();
-        const endDate = $("#end-date").val();
-
+    function loadTanks() {
         $.ajax({
-            url: '/data/filtered',
-            data: {
-                start_date: startDate,
-                end_date: endDate
+            url: '/tanks', 
+            method: 'GET',
+            success: function(data) {
+                $('#tank-select').empty(); 
+                $('#tank-select').append('<option value="">Todos os Tanques</option>');
+                data.forEach(function(tank) {
+                    $('#tank-select').append(`<option value="${tank[0]}">${tank[1]}</option>`);
+                });
             },
+            error: function(err) {
+                console.error("Erro ao obter dados dos tanques", err);
+            }
+        });
+    }
+
+    function updateData(tankId = null) {
+        const url = tankId ? `/data/filtered/${tankId}` : '/data';
+        $.ajax({
+            url: url, 
+            method: 'GET',
             success: function(data) {
                 updateTable(data);
                 updateChart(data);
-                updateStats(data); // Adiciona a atualização das estatísticas
+                updateStats(data);
             },
             error: function(err) {
-                console.error("Erro ao obter dados filtrados", err);
+                console.error("Erro ao obter dados", err);
             }
         });
+    }
+
+    socket.on('connect', function() {
+        console.log('Connected to WebSocket'); 
+    });
+
+    socket.on('update', function(data) {
+        console.log("Data received via WebSocket:", data);
+        updateTable(data);
+        updateChart(data);
+        updateStats(data); 
+    });
+
+    loadTanks();
+    updateData(); 
+
+    $('#tank-select').change(function() {
+        const selectedTankOption = $(this).find(':selected');
+        const selectedTankIndex = selectedTankOption.index(); 
+
+        if (selectedTankIndex > 0) { 
+            updateData(selectedTankIndex);
+        } else {
+            updateData(); 
+        }
+    });
+
+    $("#filter-form").submit(function(event) {
+        event.preventDefault();
+    
+        const startDate = $("#start-date").val();
+        const endDate = $("#end-date").val();
+        const selectedTankOption = $('#tank-select').find(':selected');
+        const selectedTankIndex = selectedTankOption.index();
+    
+        if (selectedTankIndex > 0) { 
+            $.ajax({
+                url: `/data/filtered/${selectedTankIndex}`, 
+                data: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                success: function(data) {
+                    updateTable(data);
+                    updateChart(data);
+                    updateStats(data); 
+                },
+                error: function(err) {
+                    console.error("Erro ao obter dados filtrados", err);
+                }
+            });
+        } else {
+            $.ajax({
+                url: '/data/filtered', 
+                data: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                success: function(data) {
+                    updateTable(data);
+                    updateChart(data);
+                    updateStats(data); 
+                },
+                error: function(err) {
+                    console.error("Erro ao obter dados filtrados", err);
+                }
+            });
+        }
     });
 });
