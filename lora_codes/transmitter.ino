@@ -8,12 +8,20 @@ const int echo_port = 4;
 const float longest_distance = 100;
 uint8_t indatabuf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(indatabuf);
+String id;
+String lastMessageSent, receivedMessage, messageType, messageId, officialId;
+enum ProtocolState {
+  HANDSHAKE,
+  ACTIVE_TRANSMITTER
+} state;
 
 // instanciation
 RH_RF95 rf95;
 
 void setup() 
 {
+  Serial.begin(9600);
+  
   pinMode(reset_lora, OUTPUT);
   pinMode(echo_port,INPUT);
   pinMode(trigger_port,OUTPUT);    
@@ -23,46 +31,63 @@ void setup()
   delay(1000);
   digitalWrite(reset_lora, HIGH); 
 
-  Serial.begin(9600);
+  
 
   if (!rf95.init())
     Serial.println("init failed");
   else // Set Brazil Allowed Frequency 
-    rf95.setFrequency(915.0);  
+    rf95.setFrequency(915.0);
+
+  state = HANDSHAKE;
+  id = generateRandomId();
 }
 
-void loop()
-{
-  makePulse();
-  float duration = pulseIn(echo_port, HIGH);
-  String distance_cm = String(microsecondsToCentimeters(duration), 2);
-  sendLoraMessage(distance_cm);
-  Serial.println(distance_cm);
+void loop() {
+  switch(state) {
+    case HANDSHAKE:
+      lastMessageSent = "HS|" + id;
+      sendLoraMessage(lastMessageSent);
+      Serial.println(lastMessageSent);
+      if (rf95.waitAvailableTimeout(3000)) { 
+        if (readWasSuccesfull()) {
+          splitMessage();
+          if (messageType == "HSACK" && messageId.equals(id)) {
+            id = officialId.toInt();
+            state = ACTIVE_TRANSMITTER;
+          }
+        } else {
+          Serial.println("recv failed");
+        }
+      } else {
+        Serial.print("Timeout, resending last message = ");
+        Serial.println(lastMessageSent);
+        sendLoraMessage(lastMessageSent);
+        
+      }
+      delay(1000);
+      break;
 
-  if (rf95.waitAvailableTimeout(3000))
-  { 
-    // Should be a reply message for us now   
-    if (rf95.recv(indatabuf, &len))
-   {
-      // Serial print "got reply:" and the reply message from the server
-       if (len < sizeof(indatabuf)) {
-        indatabuf[len] = '\0';
-      } 
-      Serial.print("got reply: ");
-      Serial.println((char*)indatabuf);
-   }
-     else
-     {
-      Serial.println("recv failed");
-     }
+    case ACTIVE_TRANSMITTER:
+      lastMessageSent = id + "|" + getLevelData();
+      sendLoraMessage(lastMessageSent);
+      Serial.println(lastMessageSent);
+      if (rf95.waitAvailableTimeout(3000)) {   
+        if (readWasSuccesfull()) {
+          splitMessage();
+          if (messageType == "ACK" && messageId.equals(id)) {
+            Serial.println("ACK received");
+          }
+        } else {
+          Serial.println("recv failed");
+        }
+      } else {
+        Serial.print("Timeout, resending last message = ");
+        Serial.println(lastMessageSent);
+        sendLoraMessage(lastMessageSent);
+      }
+      delay(5000);
+      break;
   }
-  else
-  {
-    // Serial print "No reply, is rf95_server running?" if don't get the reply .
-    Serial.println("No reply, is rf95_server running? Sending the same message");
-    sendLoraMessage(distance_cm);
-  }
-  delay(5000);
 }
 
 void makePulse(void) {
@@ -80,9 +105,39 @@ float microsecondsToCentimeters(float microseconds) {
   return microseconds / 29 / 2;
 }
 
+String getLevelData(void) {
+  makePulse();
+  float duration = pulseIn(echo_port, HIGH);
+  return String(microsecondsToCentimeters(duration), 2);
+}
+
 void sendLoraMessage(String message) {
-  char buffer[message.length()];
-  message.toCharArray(buffer, sizeof(buffer));
+  char buffer[message.length() + 1];
+  message.toCharArray(buffer, message.length() + 1);
   rf95.send((uint8_t*)buffer, message.length());
   rf95.waitPacketSent();
+}
+
+
+String generateRandomId(void) {
+  return String(random(0, 256)); // Generates a random number between 0 and 255
+}
+
+void splitMessage(void) {
+  int firstPipe = receivedMessage.indexOf('|');
+  int secondPipe = receivedMessage.indexOf('|', firstPipe + 1);
+
+  messageType = receivedMessage.substring(0, firstPipe);
+  messageId = receivedMessage.substring(firstPipe + 1, secondPipe);
+  officialId = receivedMessage.substring(secondPipe + 1);
+}
+
+bool readWasSuccesfull(void) {
+  if (rf95.recv(indatabuf, &len)) {
+    if (len < sizeof(indatabuf)) 
+        indatabuf[len] = '\0';
+    receivedMessage = (char*)indatabuf;
+    return true;
+  }
+  return false;
 }
