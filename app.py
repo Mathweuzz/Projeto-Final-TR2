@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
+from datetime import datetime
 import sqlite3
 
 app = Flask(__name__)
@@ -79,15 +80,15 @@ def update():
     socketio.emit('update', data)
     return 'Data updated and sent via WebSocket'
 
-def create_tank(name):
+def create_tank(id):
     conn = sqlite3.connect('fuel_tank_data.db')
     c = conn.cursor()
-    c.execute('INSERT INTO tanks (name) VALUES (?)', (name,))
+    name = f"Tanque {id}"
+    c.execute('INSERT INTO tanks (id, name) VALUES (?, ?)', (id, name))
     conn.commit()
-    tank_id = c.lastrowid
     conn.close()
-    print(f"Tank '{name}' created with ID {tank_id}")
-    return tank_id
+    print(f"Tank '{name}' created with ID {id}")
+    return id
 
 @app.route('/insert', methods=['POST'])
 def insert_data():
@@ -98,9 +99,9 @@ def insert_data():
         c = conn.cursor()
         c.execute("SELECT 1 FROM tanks WHERE id = ?", (tank_id,))
         if not c.fetchone():
-            tank_name = f"Tanque {tank_id}"
-            tank_id = create_tank(tank_name)
-        c.execute("INSERT INTO fuel_data (tank_id, datetime, level) VALUES (?, datetime('now'), ?)", (tank_id, level))
+            tank_id = create_tank(tank_id)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute('INSERT INTO fuel_data (tank_id, datetime, level) VALUES (?, ?, ?)', (tank_id, now, level))
         conn.commit()
         conn.close()
         return jsonify({'message': 'Data inserted successfully'})

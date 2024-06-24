@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 
 conn = sqlite3.connect('fuel_tank_data.db')
+
 c = conn.cursor()
 
 c.execute('''
@@ -21,10 +22,12 @@ c.execute('''
     )
 ''')
 
-def create_tank(name):
-    c.execute('INSERT INTO tanks (name) VALUES (?)', (name,))
+def create_tank(id):
+    name = f"Tanque {id}"
+    c.execute("INSERT INTO tanks (id, name) VALUES (?, ?)", (id, name))
     conn.commit()
-    print(f"Tank '{name}' created with ID {c.lastrowid}")
+    print(f"Tank '{name}' created with ID {id}")
+    return id
 
 def insert_data(tank_id, level):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -32,24 +35,31 @@ def insert_data(tank_id, level):
     conn.commit()
     print(f"Data inserted for tank {tank_id}: {now}, Level: {level}")
 
-create_tank('Tanque 1')
-create_tank('Tanque 17')
-create_tank('Tanque 9')
+def add_data():
+    while True:
+        try:
+            tank_id = int(input("Enter tank ID: "))
+            level = float(input("Enter fuel level: "))
 
-insert_data(1, 22.3)
-insert_data(1, 19.14)
-insert_data(1, 12.18)
-insert_data(2, 18.5)
-insert_data(2, 13.2)
-insert_data(3, 14.8)
-insert_data(3, 17.9)
+            c.execute("SELECT 1 FROM tanks WHERE id = ?", (tank_id,))
+            if not c.fetchone():
+                tank_id = create_tank(tank_id)
+            
+            insert_data(tank_id, level)
+        except ValueError:
+            print("Invalid input ID")
+        except KeyboardInterrupt:
+            print("Exit")
+            break
 
-c.execute('SELECT * FROM tanks')
+add_data()
+
+c.execute("SELECT * FROM tanks")
 print("Tanks:")
 for row in c.fetchall():
     print(row)
 
-c.execute('SELECT * FROM fuel_data')
+c.execute("SELECT * FROM fuel_data")
 print("Fuel Data:")
 for row in c.fetchall():
     print(row)
