@@ -52,6 +52,15 @@ def add_data():
             print("Exit")
             break
 
+def delete_tank(tank_id):
+    c.execute('DELETE FROM tanks WHERE id = ?', (tank_id,))
+    c.execute("DELETE FROM fuel_data WHERE tank_id = ?", (tank_id,))
+    conn.commit()
+    print(f"Tank with ID {tank_id} deleted")
+
+delete_tank(9)
+
+
 add_data()
 
 c.execute("SELECT * FROM tanks")

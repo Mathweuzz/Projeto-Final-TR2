@@ -3,6 +3,9 @@ $(document).ready(function() {
 
     const table = $('#data-table').DataTable({
         order: [[0, 'desc']],
+        columnDefs: [
+            { className: "text-center", targets: "_all" }
+        ]
     });
 
     let currentPage = 0;
@@ -12,13 +15,16 @@ $(document).ready(function() {
         const pageInfo = table.page.info();
         currentPage = pageInfo.page;
         pageSize = pageInfo.length;
-
+    
         table.clear();
         data.forEach(row => {
-            table.row.add([row[0], row[1], row[2]]);
+            const rowNode = table.row.add([row[0], row[1] +"%", row[2]]).node();
+            if (row[1] < 15) {
+                $(rowNode).addClass('low-level');
+            }
         });
         table.draw();
-
+    
         table.page(currentPage).draw(false);
         table.page.len(pageSize).draw(false);
     }
@@ -28,16 +34,13 @@ $(document).ready(function() {
 
     function updateChart(data) {
         data.reverse();
-
+    
         const labels = data.map(row => moment(row[0]).format('YYYY-MM-DD HH:mm'));
         const levels = data.map(row => row[1]);
-
-
+        
         if (chart) {
             chart.data.labels = labels;
             chart.data.datasets[0].data = levels;
-            chart.options.plugins.tooltip.enabled = true;
-            chart.options.plugins.zoom.enabled = true;
             chart.update();
         } else {
             chart = new Chart(fuelChart, {
@@ -47,7 +50,10 @@ $(document).ready(function() {
                     datasets: [{
                         label: 'Fuel Level',
                         data: levels,
-                        borderColor: 'blue',
+                        borderColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value < 15 ? 'red' : 'blue';
+                        },
                         borderWidth: 1,
                         fill: false
                     }]
@@ -60,16 +66,17 @@ $(document).ready(function() {
                     },
                     plugins: {
                         tooltip: {
-                            enabled: true 
+                            enabled: true
                         },
                         zoom: {
-                            enabled: true 
+                            enabled: true
                         }
                     }
                 }
             });
         }
     }
+    
 
     function updateStats(data) {
         const levels = data.map(row => row[1]);
@@ -99,15 +106,30 @@ $(document).ready(function() {
         });
     }
 
-    function updateData(tankId = null) {
-        const url = tankId ? `/data/filtered/${tankId}` : '/data';
+    function updateData(tankId = null, startDate = null, endDate = null) {
+        let url = '/data';
+        let data = {};
+        
+        if (tankId) {
+            url = `/data/filtered/${tankId}`;
+        }
+        
+        if (startDate && endDate) {
+            data.start_date = startDate;
+            data.end_date = endDate;
+        }
+
+        console.log(`Making AJAX request to ${url} with data:`, data);
+
         $.ajax({
-            url: url, 
+            url: url,
             method: 'GET',
-            success: function(data) {
-                updateTable(data);
-                updateChart(data);
-                updateStats(data);
+            data: data,
+            success: function(response) {
+                console.log("Data received from server:", response);
+                updateTable(response);
+                updateChart(response);
+                updateStats(response);
             },
             error: function(err) {
                 console.error("Erro ao obter dados", err);
@@ -130,14 +152,11 @@ $(document).ready(function() {
     updateData(); 
 
     $('#tank-select').change(function() {
-        const selectedTankOption = $(this).find(':selected');
-        const selectedTankIndex = selectedTankOption.index(); 
+        const selectedTankId = $(this).find(":selected").val();
+        const startDate = $("#start-date").val();
+        const endDate = $("#end-date").val();
 
-        if (selectedTankIndex > 0) { 
-            updateData(selectedTankIndex);
-        } else {
-            updateData(); 
-        }
+        updateData(selectedTankId, startDate, endDate);
     });
 
     $("#filter-form").submit(function(event) {
@@ -146,40 +165,31 @@ $(document).ready(function() {
         const startDate = $("#start-date").val();
         const endDate = $("#end-date").val();
         const selectedTankOption = $('#tank-select').find(':selected');
-        const selectedTankIndex = selectedTankOption.index();
+        const tankId = selectedTankOption.val() ? selectedTankOption.val().match(/\d+/)[0] : null;
     
-        if (selectedTankIndex > 0) { 
-            $.ajax({
-                url: `/data/filtered/${selectedTankIndex}`, 
-                data: {
-                    start_date: startDate,
-                    end_date: endDate
-                },
-                success: function(data) {
-                    updateTable(data);
-                    updateChart(data);
-                    updateStats(data); 
-                },
-                error: function(err) {
-                    console.error("Erro ao obter dados filtrados", err);
-                }
-            });
-        } else {
-            $.ajax({
-                url: '/data/filtered', 
-                data: {
-                    start_date: startDate,
-                    end_date: endDate
-                },
-                success: function(data) {
-                    updateTable(data);
-                    updateChart(data);
-                    updateStats(data); 
-                },
-                error: function(err) {
-                    console.error("Erro ao obter dados filtrados", err);
-                }
-            });
+        const requestData = {
+            start_date: startDate,
+            end_date: endDate
+        };
+        if (tankId) {
+            requestData.tank_id = tankId;
         }
+    
+        console.log("Making AJAX request to /data with data:", requestData);
+    
+        $.ajax({
+            url: '/data/filtered', 
+            data: requestData,
+            success: function(data) {
+                console.log("Data received from server:", data);
+                updateTable(data);
+                updateChart(data);
+                updateStats(data); 
+            },
+            error: function(err) {
+                console.error("Erro ao obter dados filtrados", err);
+            }
+        });
     });
+
 });

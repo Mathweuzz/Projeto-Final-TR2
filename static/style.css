@@ -27,3 +27,13 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-weight: bold;
     color: #007bff;
 }
+
+.low-level {
+    color: red;
+    font-weight: bold;
+}
+
+.data-table td, th{
+    text-align: center;
+    vertical-align: middle;
+}

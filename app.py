@@ -27,33 +27,51 @@ def get_data():
     conn.close()
     return data
 
-def get_filtered_data(start_date, end_date):
+def get_filtered_data(start_date, end_date, tank_id=None):
     conn = sqlite3.connect('fuel_tank_data.db')
     c = conn.cursor()
 
     start_date = f"{start_date} 00:00:00"
     end_date = f"{end_date} 23:59:59"
 
-    query = '''
-        SELECT 
-            fuel_data.datetime, 
-            fuel_data.level, 
-            tanks.name AS tank_name 
-        FROM 
-            fuel_data 
-        JOIN 
-            tanks ON fuel_data.tank_id = tanks.id 
-        WHERE 
-            fuel_data.datetime BETWEEN ? AND ?
-        ORDER BY 
-            fuel_data.datetime DESC
-    '''
-    c.execute(query, (start_date, end_date))
+    if tank_id:
+        query = '''
+            SELECT 
+                fuel_data.datetime, 
+                fuel_data.level, 
+                tanks.name AS tank_name 
+            FROM 
+                fuel_data 
+            JOIN 
+                tanks ON fuel_data.tank_id = tanks.id 
+            WHERE 
+                fuel_data.datetime BETWEEN ? AND ? AND fuel_data.tank_id = ?
+            ORDER BY 
+                fuel_data.datetime DESC
+        '''
+        c.execute(query, (start_date, end_date, tank_id))
+    else:
+        query = '''
+            SELECT 
+                fuel_data.datetime, 
+                fuel_data.level, 
+                tanks.name AS tank_name 
+            FROM 
+                fuel_data 
+            JOIN 
+                tanks ON fuel_data.tank_id = tanks.id 
+            WHERE 
+                fuel_data.datetime BETWEEN ? AND ?
+            ORDER BY 
+                fuel_data.datetime DESC
+        '''
+        c.execute(query, (start_date, end_date))
+
     data = c.fetchall()
     conn.close()
-    return data 
- 
+    return data
 
+ 
 @app.route('/data')
 def data():
     data = get_data()
@@ -67,12 +85,14 @@ def index():
 def filtered_data():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
+    tank_id = request.args.get('tank_id')
 
     if start_date and end_date:
-        filtered_data = get_filtered_data(start_date, end_date)
+        filtered_data = get_filtered_data(start_date, end_date, tank_id)
         return jsonify(filtered_data)
     else:
         return jsonify({'error': 'Invalid date range'}), 400
+
 
 @app.route('/update')
 def update():
