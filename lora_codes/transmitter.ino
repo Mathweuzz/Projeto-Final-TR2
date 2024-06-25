@@ -88,8 +88,9 @@ void loop() {
       break;
     
     case SLEEP_STATE:
+      delay(1);
       rf95.sleep();
-      delay(10000);
+      delay(60000);
       state = ACTIVE_TRANSMITTER;
   }
 }
