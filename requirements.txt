@@ -1,0 +1,6 @@
+Flask==2.2.3
+Flask-SocketIO==5.2.0
+sqlite3
+requests
+serial
+moment
