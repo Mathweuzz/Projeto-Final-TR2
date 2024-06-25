@@ -5,7 +5,7 @@
 const int reset_lora = 9;
 const int trigger_port = 3;
 const int echo_port = 4;
-const float longest_distance = 100;
+const float longest_distance = 1000; // max sensor distance
 uint8_t indatabuf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(indatabuf);
 String id;
@@ -30,8 +30,6 @@ void setup()
   digitalWrite(reset_lora, LOW);   
   delay(1000);
   digitalWrite(reset_lora, HIGH); 
-
-  
 
   if (!rf95.init())
     Serial.println("init failed");
@@ -108,7 +106,13 @@ float microsecondsToCentimeters(float microseconds) {
 String getLevelData(void) {
   makePulse();
   float duration = pulseIn(echo_port, HIGH);
-  return String(microsecondsToCentimeters(duration), 2);
+  float level = 100 - (microsecondsToCentimeters(duration) / longest_distance * 100);
+  if (level >= 100) {
+    level = 100;
+  } else if (level <= 0) {
+    level = 0;
+  }
+  return String(level, 2);
 }
 
 void sendLoraMessage(String message) {
