@@ -1,5 +1,5 @@
-Flask==2.2.3
-Flask-SocketIO==5.2.0
+Flask
+Flask-SocketIO
 sqlite3
 requests
 serial
