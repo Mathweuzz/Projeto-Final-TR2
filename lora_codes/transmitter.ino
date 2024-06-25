@@ -5,7 +5,7 @@
 const int reset_lora = 9;
 const int trigger_port = 3;
 const int echo_port = 4;
-const float longest_distance = 100; // max sensor distance
+const float longest_distance = 1000; // max sensor distance
 uint8_t indatabuf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(indatabuf);
 String id;
