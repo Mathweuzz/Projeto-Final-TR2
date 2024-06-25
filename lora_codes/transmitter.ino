@@ -5,14 +5,15 @@
 const int reset_lora = 9;
 const int trigger_port = 3;
 const int echo_port = 4;
-const float longest_distance = 1000; // max sensor distance
+const float longest_distance = 100; // max sensor distance
 uint8_t indatabuf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(indatabuf);
 String id;
 String lastMessageSent, receivedMessage, messageType, messageId, officialId;
 enum ProtocolState {
   HANDSHAKE,
-  ACTIVE_TRANSMITTER
+  ACTIVE_TRANSMITTER,
+  SLEEP_STATE
 } state;
 
 // instanciation
@@ -83,8 +84,13 @@ void loop() {
         Serial.println(lastMessageSent);
         sendLoraMessage(lastMessageSent);
       }
-      delay(5000);
+      state = SLEEP_STATE;
       break;
+    
+    case SLEEP_STATE:
+      rf95.sleep();
+      delay(10000);
+      state = ACTIVE_TRANSMITTER;
   }
 }
 
