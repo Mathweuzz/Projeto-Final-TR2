@@ -90,8 +90,14 @@ void loop() {
     case SLEEP_STATE:
       delay(1);
       rf95.sleep();
-      delay(60000);
-      state = ACTIVE_TRANSMITTER;
+      if (readWasSuccesfull()){
+        splitMessage();
+        if (messageType == "WAKE") {
+          state = ACTIVE_TRANSMITTER;
+          Serial.println("Waking up);
+          wakeUpDelay(id);
+      }
+      }
   }
 }
 
@@ -151,4 +157,9 @@ bool readWasSuccesfull(void) {
     return true;
   }
   return false;
+}
+
+void wakeUpDelay(id) {
+  int param = id.toInt();
+  delay(100*param);
 }
