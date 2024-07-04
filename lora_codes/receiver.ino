@@ -6,6 +6,8 @@ RH_RF95 rf95;
 int reset_lora = 9;
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(buf);
+unsigned long previousMillis = 0;  // Store the last time an action was performed
+const long interval = 5000;        // Interval in milliseconds (5 seconds)
 bool rangeIds[256];
 String lastReceivedMessage, firstPart, secondPart;
 
@@ -37,17 +39,27 @@ void loop()
       {
         String hsReply = makeHandshakeReply();
         sendLoraMessage(hsReply);
+        previousMillis = currentMillis;
       } 
       else 
       {
         String dataReply = makeDataReply();
         sendLoraMessage(dataReply);
         Serial.println(lastReceivedMessage);
+        previousMillis = currentMillis;
       }
   
     } 
     else {
       Serial.println("recv failed");
+    }
+    if (currentMillis - previousMillis >= interval) {
+      // 5 seconds have passed since last received message.
+      // entering sleep mode for 1 hour
+      rf95.sleep();
+      delay(3600000);
+      dataReply = makeWakeReply();
+      sendLoraMessage(dataReply);
     }
   }
 }
@@ -86,6 +98,10 @@ String makeHandshakeReply(void) {
 
 String makeDataReply(void) {
   return "ACK|" + secondPart + "|";
+}
+
+String makeWakeReply(void) {
+  return "WAKE|" + secondPart + "|";
 }
 
 void sendLoraMessage(String message) {
