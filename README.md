@@ -46,6 +46,7 @@ The image above show the complete diagram for both arduinos.
 
 * The database is created automatically when the Flask application starts.
 * The `lora_codes` folder contains Arduino code for transmitter and receiver using LoRa modules, which can be used for wireless communication over longer distances.
+* The transmitter will enter in a sleep state every time it successfully sends measured data from the tank. The receiver will enter in a sleep state if it doesn't receive any new messages for 5 seconds, and will remain asleep for 1 hour. Upon waking up, it sends a _WAKE_ command that is received by all transmitters, which will send new data measured from its fuel tanks by id order, defined by the function _wakeUpDelay_.
 
 This project provides a full framework for monitoring fuel levels in tanks. You can further extend it by adding features like:
 
