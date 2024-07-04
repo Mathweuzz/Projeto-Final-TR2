@@ -18,6 +18,19 @@ This project is a web application for monitoring fuel levels in tanks, incorpora
 * **`style.css`:** CSS stylesheet for the web dashboard.
 * **`lora_codes/`:** Folder containing Arduino code for transmitter and receiver using LoRa modules (optional).
 
+**Arduino Diagram:**
+
+![Transmitter Arduino](images/1000187000.jpg)
+
+![Ultrassonic Sensor](images/1000187002.jpg)
+
+The images above show the diagram for the transmitter arduino. The trigger and echo ports of the ultrassonic sensor are connected to the pin 3 and pin 4 of the arduino, respectively.
+
+![Complete Diagram](images/1000187004.jpg)
+
+The image above show the complete diagram for both arduinos.
+
+
 **Getting started:**
 
 1. **Install dependencies:** Install the required libraries by running `pip install -r requirements.txt`.
