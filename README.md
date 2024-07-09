@@ -63,7 +63,7 @@ The image above show the complete diagram for both arduinos.
 
 ## Protocol for Part Two
 - To achieve a behavior of energy saving, some changes were made. After sending its tank fuel level, each transmitter enters in a sleep state. The receiver will also enter in a sleep state if it doesn't receive any message for 5 seconds - that means that all transmitters are asleep - and will remain that way for 1 hour. Upon waking up, it is ready to receive data again and sends a _WAKE_ command, which is received by all transmitters, which will wake up and wait some time based on their ids - to avoid conflicts when sending data - and then will send the current fuel level. The behavior repeats itself, achieving a realiable coordinating and power saving system
-- 
+- In the case of the server being unable to receive data from the transmitters, - like, if a power shortage occurs and the server is shut down - they will buffer the data that couldn't be retrieved by the server and send it later when available.
 ## Tests
 Manual tests were made to make sure that it would work on a real scenario.
 Transmitter and receiver were more than 100 meter distant from one another
